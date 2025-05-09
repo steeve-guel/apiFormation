@@ -1,43 +1,48 @@
-# Utilise une image officielle PHP avec Apache
+# Étape 1 : Image officielle PHP avec Apache
 FROM php:8.2-apache
 
-# Installe les extensions PHP nécessaires à Laravel et SQLite
+# Étape 2 : Installer les extensions requises pour Laravel
 RUN apt-get update && apt-get install -y \
-    unzip zip sqlite3 libsqlite3-dev libzip-dev \
+    libonig-dev \
+    libzip-dev \
+    unzip \
+    zip \
+    sqlite3 \
+    libsqlite3-dev \
+    git \
+    curl \
     && docker-php-ext-install pdo pdo_sqlite zip
 
-# Installe Composer depuis l'image officielle
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Copie tous les fichiers Laravel dans le conteneur
-COPY . /var/www/html
-
-# Définit le répertoire de travail
-WORKDIR /var/www/html
-
-# Modifie Apache pour pointer vers le dossier public/
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf
-
-# Active le module rewrite (important pour Laravel)
+# Étape 3 : Activer mod_rewrite pour Laravel
 RUN a2enmod rewrite
 
-# Installe les dépendances Laravel sans les paquets de dev
+# Étape 4 : Copier les fichiers du projet
+COPY . /var/www/html
+
+# Étape 5 : Travailler dans ce dossier
+WORKDIR /var/www/html
+
+# Étape 6 : Installer Composer manuellement
+RUN curl -sS https://getcomposer.org/installer | php && \
+    mv composer.phar /usr/local/bin/composer
+
+# Étape 7 : Installer les dépendances Laravel
 RUN composer install --no-dev --optimize-autoloader
 
-# Exécuter les migrations dans la base SQLite
-RUN php artisan migrate --force
-
-# Donne les bonnes permissions
-RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
-
-# Crée une base de données SQLite vide
+# Étape 8 : Créer une base SQLite vide dans /tmp
 RUN mkdir -p /tmp && touch /tmp/database.sqlite
 
-# Variables d’environnement de base
-ENV DB_CONNECTION=sqlite
-ENV DB_DATABASE=/tmp/database.sqlite
-ENV APP_ENV=production
-ENV APP_DEBUG=false
+# Étape 9 : Donner les permissions nécessaires
+RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
 
-# Expose le port utilisé par Apache
+# Étape 10 : Copier le .env (ou s’assurer qu’il existe dans le dépôt GitHub)
+# Si besoin, tu peux gérer tes variables via Render.
+
+# Étape 11 : Générer la clé d'application Laravel
+RUN php artisan config:clear && php artisan key:generate --force
+
+# Étape 12 : Exécuter les migrations automatiquement
+RUN php artisan migrate --force
+
+# Étape 13 : Exposer le port 80
 EXPOSE 80
