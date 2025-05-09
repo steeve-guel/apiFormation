@@ -39,10 +39,8 @@ RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
 # Si besoin, tu peux gérer tes variables via Render.
 
 # Étape 11 : Générer la clé d'application Laravel
-RUN php artisan config:clear && php artisan key:generate --force
+CMD php artisan migrate --force && apache2-foreground
 
-# Étape 12 : Exécuter les migrations automatiquement
-RUN php artisan migrate --force
 
 # Étape 13 : Exposer le port 80
 EXPOSE 80
