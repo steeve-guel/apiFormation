@@ -28,7 +28,7 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Étape 6 : Copier les fichiers (sans vendor)
 COPY . /var/www/html/
 
-# Étape 7 : Installer les dépendances
+# Étape 7 : Installer les dépendances Laravel
 RUN composer install --no-dev --optimize-autoloader
 
 # Étape 8 : Configurer les permissions
@@ -36,22 +36,20 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/bootstrap/cache
 
-# Étape 9 : Créer et configurer SQLite
+# Étape 9 : Créer et configurer la base SQLite
 RUN mkdir -p /var/www/html/database \
     && touch /var/www/html/database/database.sqlite \
-    && chown www-data:www-data /var/www/html/database/database.sqlite \
-    && chmod 664 /var/www/html/database/database.sqlite
+    && chmod 777 /var/www/html/database/database.sqlite
 
-# Étape 10 : Configurer .env pour SQLite
-RUN echo "DB_CONNECTION=sqlite" >> /var/www/html/.env \
-    && echo "DB_DATABASE=/var/www/html/database/database.sqlite" >> /var/www/html/.env
+# Étape 10 : S'assurer que .env existe et a les bonnes variables
+# (ne pas l'écraser si présent)
+RUN if [ ! -f /var/www/html/.env ]; then cp /var/www/html/.env.example /var/www/html/.env; fi
 
 # Étape 11 : Exposer le port
 EXPOSE 80
 
 # Étape 12 : Commande de démarrage
 CMD php artisan config:clear \
-    && php artisan cache:clear \
-    && php artisan route:clear \
+    && php artisan key:generate --force \
     && php artisan migrate --force \
     && apache2-foreground
