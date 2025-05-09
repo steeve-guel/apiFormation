@@ -19,28 +19,31 @@ RUN a2enmod rewrite
 # Étape 4 : Copier les fichiers du projet
 COPY . /var/www/html
 
-# Étape 5 : Travailler dans ce dossier
+# Étape 5 : Changer le DocumentRoot d’Apache pour Laravel
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+
+# Étape 6 : Reconfigurer Apache pour pointer sur /public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf && \
+    sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Étape 7 : Travailler dans ce dossier
 WORKDIR /var/www/html
 
-# Étape 6 : Installer Composer manuellement
+# Étape 8 : Installer Composer manuellement
 RUN curl -sS https://getcomposer.org/installer | php && \
     mv composer.phar /usr/local/bin/composer
 
-# Étape 7 : Installer les dépendances Laravel
+# Étape 9 : Installer les dépendances Laravel
 RUN composer install --no-dev --optimize-autoloader
 
-# Étape 8 : Créer une base SQLite vide dans /tmp
+# Étape 10 : Créer une base SQLite vide dans /tmp
 RUN mkdir -p /tmp && touch /tmp/database.sqlite
 
-# Étape 9 : Donner les permissions nécessaires
+# Étape 11 : Donner les permissions nécessaires
 RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
 
-# Étape 10 : Copier le .env (ou s’assurer qu’il existe dans le dépôt GitHub)
-# Si besoin, tu peux gérer tes variables via Render.
-
-# Étape 11 : Générer la clé d'application Laravel
-CMD php artisan migrate --force && apache2-foreground
-
-
-# Étape 13 : Exposer le port 80
+# Étape 12 : Exposer le port 80
 EXPOSE 80
+
+# Étape 13 : Lancer les migrations + Apache au démarrage
+CMD php artisan config:cache && php artisan migrate --force && apache2-foreground
