@@ -24,6 +24,9 @@ RUN a2enmod rewrite
 # Installe les dépendances Laravel sans les paquets de dev
 RUN composer install --no-dev --optimize-autoloader
 
+# Exécuter les migrations dans la base SQLite
+RUN php artisan migrate --force
+
 # Donne les bonnes permissions
 RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
 
