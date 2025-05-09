@@ -42,6 +42,9 @@ RUN mkdir -p /tmp && touch /tmp/database.sqlite
 # Étape 11 : Donner les permissions nécessaires
 RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
 
+RUN chmod 777 /tmp/database.sqlite
+
+
 # Étape 12 : Exposer le port 80
 EXPOSE 80
 
