@@ -1,7 +1,7 @@
 # Étape 1 : Image officielle PHP avec Apache
 FROM php:8.2-apache
 
-# Étape 2 : Installer les extensions requises pour Laravel
+# Étape 2 : Installer les extensions requises
 RUN apt-get update && apt-get install -y \
     libonig-dev \
     libzip-dev \
@@ -19,34 +19,34 @@ RUN a2enmod rewrite
 # Étape 4 : Copier les fichiers du projet
 COPY . /var/www/html
 
-# Étape 5 : Changer le DocumentRoot d’Apache pour Laravel
+# Étape 5 : Définir le document root d’Apache sur /public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 
-# Étape 6 : Reconfigurer Apache pour pointer sur /public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf && \
     sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Étape 7 : Travailler dans ce dossier
+# Étape 6 : Travailler dans le bon dossier
 WORKDIR /var/www/html
 
-# Étape 8 : Installer Composer manuellement
+# Étape 7 : Installer Composer
 RUN curl -sS https://getcomposer.org/installer | php && \
     mv composer.phar /usr/local/bin/composer
 
-# Étape 9 : Installer les dépendances Laravel
+# Étape 8 : Installer les dépendances Laravel
 RUN composer install --no-dev --optimize-autoloader
 
-# Étape 10 : Créer une base SQLite vide dans /tmp
-RUN mkdir -p /tmp && touch /tmp/database.sqlite
+# Étape 9 : Créer la base SQLite dans storage
+RUN touch /var/www/html/storage/database.sqlite && chmod 777 /var/www/html/storage/database.sqlite
 
-# Étape 11 : Donner les permissions nécessaires
-RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
+# Étape 10 : Donner les bonnes permissions aux dossiers Laravel
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \
+    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-RUN chmod 777 /tmp/database.sqlite
+# Étape 11 : Exécuter les migrations et démarrer Apache
+CMD php artisan config:clear && \
+    php artisan key:generate --force && \
+    php artisan migrate --force && \
+    apache2-foreground
 
-
-# Étape 12 : Exposer le port 80
+# Étape 12 : Exposer le port
 EXPOSE 80
-
-# Étape 13 : Lancer les migrations + Apache au démarrage
-CMD php artisan config:cache && php artisan migrate --force && apache2-foreground
